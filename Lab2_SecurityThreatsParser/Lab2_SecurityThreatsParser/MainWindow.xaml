@@ -1,0 +1,269 @@
+﻿<Window x:Class="Lab2_GUI.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:Lab2_GUI"
+        mc:Ignorable="d"
+        Closing="MainWindow_Closing"
+        Title="IS Threats Parser" Height="450" Width="800" MinHeight="250" MinWidth="400"
+        Icon="Resources/Icons/security-shield .ico"
+        >
+
+
+
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="btv" />
+
+
+        <!-- style a top level menu item -->
+        <ControlTemplate x:Key="MenuTop" TargetType="MenuItem">
+            <StackPanel TextBlock.FontSize="15px" Height="40">
+                <!-- label, icons, etc. -->
+                <Label Content="{TemplateBinding Header}" Margin="5" Foreground="White"/>
+
+                <!-- sub items -->
+                <Popup x:Name="PART_Popup" AllowsTransparency="True" Focusable="False" IsOpen="{Binding IsSubmenuOpen, RelativeSource={RelativeSource TemplatedParent}}" PopupAnimation="{DynamicResource {x:Static SystemParameters.MenuPopupAnimationKey}}" Placement="Bottom">
+                    <Border x:Name="SubMenuBorder" Background="White" BorderThickness="0" Margin="0" Padding="0">
+                        <ScrollViewer x:Name="SubMenuScrollViewer" Style="{DynamicResource {ComponentResourceKey ResourceId=MenuScrollViewer, TypeInTargetAssembly={x:Type FrameworkElement}}}">
+                            <Grid RenderOptions.ClearTypeHint="Enabled">
+
+                                <ItemsPresenter x:Name="ItemsPresenter" KeyboardNavigation.DirectionalNavigation="Cycle" Grid.IsSharedSizeScope="True" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" KeyboardNavigation.TabNavigation="Cycle"/>
+                            </Grid>
+                        </ScrollViewer>
+                    </Border>
+                </Popup>
+                <StackPanel.Style>
+                    <Style TargetType="StackPanel">
+                        <Style.Triggers>
+                            <Trigger Property="IsMouseOver"  Value="True">
+                                <Setter Property="Background" Value="#106EBE" />
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </StackPanel.Style>
+            </StackPanel>
+            <ControlTemplate.Triggers>
+                <Trigger Property="IsMouseOver" Value="True" >
+                    <Setter Property="IsOpen" TargetName="PART_Popup" Value="True"/>
+                    <Setter Property="Cursor" Value="Hand"/>
+                </Trigger>
+            </ControlTemplate.Triggers>
+        </ControlTemplate>
+
+
+
+        <!-- style the separator -->
+        <ControlTemplate x:Key="MenuSep" TargetType="Separator">
+            <Border Height="1" Background="#E0E0E0" />
+        </ControlTemplate>
+
+
+        <!-- some base stuff -->
+        <Style TargetType="Menu">
+            <Setter Property="Background" Value="#0078D7" />
+            <Setter Property="Height" Value="35px" />
+        </Style>
+
+        <ControlTemplate x:Key="MenuSub" TargetType="{x:Type MenuItem}"  >
+
+            <Border x:Name="templateRoot" BorderThickness="1" Background="White" SnapsToDevicePixels="True">
+                <Grid Margin="0" Height="35px" Background="White">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition MinWidth="22" SharedSizeGroup="MenuItemIconColumnGroup" Width="Auto"/>
+                        <ColumnDefinition Width="15"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="30"/>
+                        <ColumnDefinition SharedSizeGroup="MenuItemIGTColumnGroup" Width="Auto"/>
+                        <ColumnDefinition Width="20"/>
+                    </Grid.ColumnDefinitions>
+                    <ContentPresenter x:Name="Icon" Content="{TemplateBinding Icon}" 
+                                      ContentSource="Icon" 
+                                      HorizontalAlignment="Center" 
+                                      SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" 
+                                      VerticalAlignment="Center" 
+                                      Width="26"
+                                      Height="26"
+                                      Margin="5,0,0,0"/>
+                    <Border x:Name="GlyphPanel" BorderBrush="#FF26A0DA" BorderThickness="0" Background="#3D26A0DA" ClipToBounds="False" HorizontalAlignment="Center" Height="22" Margin="-1,0,0,0" Visibility="Hidden" VerticalAlignment="Center" Width="22">
+                        <Path x:Name="Glyph" Data="F1M10,1.2L4.7,9.1 4.5,9.1 0,5.2 1.3,3.5 4.3,6.1 8.3,0 10,1.2z" Fill="#FF212121" FlowDirection="LeftToRight" Height="11" Width="10"/>
+                    </Border>
+                    <ContentPresenter TextBlock.FontSize="13px" x:Name="menuHeaderContainer" ContentTemplate="{TemplateBinding HeaderTemplate}" Content="{TemplateBinding Header}" Grid.Column="2" ContentStringFormat="{TemplateBinding HeaderStringFormat}" ContentSource="Header" HorizontalAlignment="Left" Margin="{TemplateBinding Padding}" RecognizesAccessKey="True" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="menuGestureText"  FontSize="11px" Grid.Column="4" Margin="{TemplateBinding Padding}" Opacity="0.7" Text="{TemplateBinding InputGestureText}" VerticalAlignment="Center"/>
+                </Grid>
+            </Border>
+            <ControlTemplate.Triggers>
+                <Trigger Property="Icon" Value="{x:Null}">
+                    <Setter Property="Visibility" TargetName="Icon" Value="Collapsed"/>
+                </Trigger>
+                <Trigger Property="IsChecked" Value="True">
+                    <Setter Property="Visibility" TargetName="GlyphPanel" Value="Visible"/>
+                    <Setter Property="Visibility" TargetName="Icon" Value="Collapsed"/>
+                </Trigger>
+                <Trigger Property="IsHighlighted" Value="True">
+                    <Setter Property="Background" TargetName="templateRoot" Value="#A5D1D5"/>
+                    <Setter Property="BorderBrush" TargetName="templateRoot" Value="#FF26A0DA"/>
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="TextElement.Foreground" TargetName="templateRoot" Value="#FF707070"/>
+                    <Setter Property="Fill" TargetName="Glyph" Value="#FF707070"/>
+                </Trigger>
+                <MultiTrigger>
+                    <MultiTrigger.Conditions>
+                        <Condition Property="IsHighlighted" Value="True"/>
+                        <Condition Property="IsEnabled" Value="False"/>
+                    </MultiTrigger.Conditions>
+                    <Setter Property="Background" TargetName="templateRoot" Value="#A5D1D5"/>
+                    <Setter Property="BorderBrush" TargetName="templateRoot" Value="White"/>
+                </MultiTrigger>
+            </ControlTemplate.Triggers>
+        </ControlTemplate>
+
+    </Window.Resources>
+
+    <Window.CommandBindings>
+        <CommandBinding Command="New" 
+                        CanExecute="CommandBindingNew_CanExecute" 
+                        Executed="CommandBindingNew_Executed"/>
+        <CommandBinding Command="Open" 
+                        CanExecute="CommandBindingOpen_CanExecute" 
+                        Executed="CommandBindingOpen_Executed"/>
+        <CommandBinding Command="Undo" 
+                        CanExecute="CommandBindingUndo_CanExecute" 
+                        Executed="CommandBindingUndo_Executed"/>
+        <CommandBinding Command="Redo" 
+                        CanExecute="CommandBindingRedo_CanExecute" 
+                        Executed="CommandBindingRedo_Executed"/>
+        <CommandBinding Command="Save" 
+                        CanExecute="CommandBindingSave_CanExecute" 
+                        Executed="CommandBindingSave_Executed"/>
+
+
+    </Window.CommandBindings>
+
+
+
+
+
+
+
+    <Grid x:Name="MainGrid" Background="#FFE5EEF1" >
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition></ColumnDefinition>
+            <ColumnDefinition></ColumnDefinition>
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions >
+            <RowDefinition Height="40"  />
+            <RowDefinition Height="34" />
+            <RowDefinition  Height="*" />
+            <RowDefinition  Height="30" />
+            <RowDefinition Height="22"  />
+        </Grid.RowDefinitions>
+        <!-- the real app and real menu -->
+
+        <Menu IsMainMenu="True" Height="Auto" Grid.Row="0" Grid.ColumnSpan="2">
+            <MenuItem Header="_File" Template="{StaticResource MenuTop}" >
+                <MenuItem Header="_Open" Command="Open" Template="{StaticResource MenuSub}"/>
+                <MenuItem Header="_Load default (from web)" Command="New" Template="{StaticResource MenuSub}" />
+                <MenuItem Header="_Update" Template="{StaticResource MenuSub}" />
+                <Separator Template="{StaticResource MenuSep}" />
+                <MenuItem Header="_Save" Command="Save" Template="{StaticResource MenuSub}" />
+                <MenuItem Header="_Save As" Command="SaveAs" Template="{StaticResource MenuSub}"/>
+                <MenuItem Header="_Close file" Template="{StaticResource MenuSub}" />
+                <Separator Template="{StaticResource MenuSep}" />
+                <MenuItem Name="MenuItemExit" Header="_Exit"  InputGestureText="Alt+F4" Click="MenuItemExit_Clicked" Template="{DynamicResource MenuSub}">
+                    <MenuItem.Icon>
+                        <Image Source="/Resources/Icons/cancel.ico" />
+                    </MenuItem.Icon>
+                </MenuItem>
+            </MenuItem>
+            <MenuItem Header="_Edit" Template="{StaticResource MenuTop}">
+                <MenuItem Header="_Undo" Command="Undo" Template="{StaticResource MenuSub}"/>
+                <MenuItem Header="_Redo" Command="Redo" Template="{StaticResource MenuSub}"/>
+                <Separator Template="{StaticResource MenuSep}" />
+                <MenuItem Header="_Cut" Command="Cut" Template="{StaticResource MenuSub}"/>
+                <MenuItem Header="_Copy" Command="Copy" Template="{StaticResource MenuSub}"/>
+                <MenuItem Header="_Paste" Command="Paste" Template="{StaticResource MenuSub}" />
+            </MenuItem>
+            <MenuItem Header="_Help" Template="{StaticResource MenuTop}">
+                <MenuItem Header="_About" Template="{StaticResource MenuSub}" Click="MenuItemAbout_Click"/>
+                <Separator Template="{StaticResource MenuSep}" />
+                <MenuItem Header="_Bug Report"  Template="{StaticResource MenuSub}" Click="MenuItemBugReport_Click">
+                    <MenuItem.Icon >
+                        <Image Source="Resources/Icons/bug.ico"/>
+                    </MenuItem.Icon>
+                </MenuItem>
+            </MenuItem>
+        </Menu>
+        <DockPanel Grid.Row="1" Grid.ColumnSpan="2">
+            <Button Background="AliceBlue" Content="heel" MinWidth="35px">
+
+            </Button>
+            <Button  Background="AliceBlue" Content="heel2">
+
+            </Button>
+            <Button  Background="AliceBlue" Content="heel2">
+
+            </Button>
+        </DockPanel>
+
+        <Grid Grid.Row="2" Grid.ColumnSpan="2" Margin="15">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition ></ColumnDefinition>
+                <ColumnDefinition Width="20"></ColumnDefinition>
+                <ColumnDefinition></ColumnDefinition>
+            </Grid.ColumnDefinitions>
+            <DataGrid Grid.Column="0"  Name="MainDataGrid" 
+                      MinHeight="175" IsReadOnly="True" 
+                      RowBackground="White" AreRowDetailsFrozen="True" 
+                      AlternatingRowBackground="#FFAACDEA"
+                      ItemsSource="{Binding Si}" 
+                      AutoGenerateColumns="False">
+                <DataGrid.ItemContainerStyle>
+                    <Style TargetType="DataGridRow">
+                        <EventSetter Event="Selected" Handler="Row_Selected"/>
+                    </Style>
+                </DataGrid.ItemContainerStyle>
+                <DataGrid.Columns>
+                    <DataGridTextColumn MinWidth="25" Binding="{Binding Id}" Header="ID угрозы"/>
+                    <DataGridTextColumn Width="*" Binding="{Binding Name}" Header="Наименование"/>
+                </DataGrid.Columns>
+
+            </DataGrid>
+
+
+            <DataGrid Grid.Column="2"  Name="SupportDataGrid" MinHeight="175" 
+                      ItemsSource="{Binding Fi}" AutoGenerateColumns="False">
+                <DataGrid.Columns>
+                    <DataGridTextColumn MinWidth="100" Binding="{Binding Path=Item1}"  Header="Тип"/>
+                    <DataGridTextColumn Width="*" Binding="{Binding Path=Item2}"  Header="Содержание"/>
+                </DataGrid.Columns>
+
+            </DataGrid>
+        </Grid>
+        <ComboBox HorizontalAlignment="Left" Margin="315,0,0,0" 
+                  Grid.Row="3" Grid.Column="0" VerticalAlignment="Top" Width="50" Height="20"/>
+        <StatusBar Name="BottomStatusBar" BorderThickness="1"
+                   BorderBrush="#FFAAA8AE" Background="#FF0078D7"  
+                   Grid.Row="4" Grid.ColumnSpan="2">
+            <Grid Name="StatusBarGrid" HorizontalAlignment="Stretch" Width="782" >
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="577*"></ColumnDefinition>
+                    <ColumnDefinition Width="78*"></ColumnDefinition>
+                    <ColumnDefinition Width="127*"></ColumnDefinition>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions >
+                    <RowDefinition MinHeight="20"  />
+                </Grid.RowDefinitions>
+
+                <TextBlock Name="CursorPos" FontFamily="Consolas" Foreground="White" Text="All rights reserved (Probably)" Grid.Column="0"/>
+            </Grid>
+
+
+        </StatusBar>
+
+
+
+
+    </Grid>
+</Window>

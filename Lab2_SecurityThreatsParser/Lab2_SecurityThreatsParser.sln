@@ -1,0 +1,30 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30709.132
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab2_SecurityThreatsParser", "Lab2_SecurityThreatsParser\Lab2_SecurityThreatsParser.csproj", "{451381F8-51FA-4D13-BED9-1E38B33656E8}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{BA800357-9734-4592-AEF9-2F4849A1DF42}"
+	ProjectSection(SolutionItems) = preProject
+		Lab2_SecurityThreatsParser\Resources\Icons\cancel.ico = Lab2_SecurityThreatsParser\Resources\Icons\cancel.ico
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{451381F8-51FA-4D13-BED9-1E38B33656E8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{451381F8-51FA-4D13-BED9-1E38B33656E8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{451381F8-51FA-4D13-BED9-1E38B33656E8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{451381F8-51FA-4D13-BED9-1E38B33656E8}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {7472B004-34FD-4F7A-8D6C-12D381139585}
+	EndGlobalSection
+EndGlobal
