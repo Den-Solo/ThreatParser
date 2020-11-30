@@ -130,9 +130,9 @@
         <CommandBinding Command="Open" 
                         CanExecute="CmdOpen_CanExecute" 
                         Executed="CmdOpen_Executed"/>
-        <CommandBinding Command="Save" 
+        <CommandBinding Command="SaveAs" 
                         CanExecute="CmdSave_CanExecute" 
-                        Executed="CmdSave_Executed"/>
+                        Executed="CmdSaveAs_Executed"/>
     </Window.CommandBindings>
 
 
@@ -153,14 +153,12 @@
 
         <Menu IsMainMenu="True" Height="Auto" Grid.Row="0" Grid.ColumnSpan="2">
             <MenuItem Header="_File" Template="{StaticResource MenuTop}" >
-                <MenuItem Header="_Open" Command="Open" Template="{StaticResource MenuSub}"/>
+                <MenuItem Header="_Open default" Command="Open" Template="{StaticResource MenuSub}"/>
                 <MenuItem Header="_Load default (from web)" Command="New" Template="{StaticResource MenuSub}" />
                 <MenuItem Header="_Update (web)" Template="{StaticResource MenuSub}" Click="_UpdateWeb_Click"/>
                 <MenuItem Header="_Update (Local)" Template="{StaticResource MenuSub}" Click="_UpdateLocal_Click"/>
                 <Separator Template="{StaticResource MenuSep}" />
-                <MenuItem Header="_Save" Command="Save" Template="{StaticResource MenuSub}" />
                 <MenuItem Header="_Save As" Command="SaveAs" Template="{StaticResource MenuSub}"/>
-                <MenuItem Header="_Close file" Template="{StaticResource MenuSub}" />
                 <Separator Template="{StaticResource MenuSep}" />
                 <MenuItem Name="MenuItemExit" Header="_Exit"  InputGestureText="Alt+F4" Click="MenuItemExit_Clicked" Template="{DynamicResource MenuSub}">
                     <MenuItem.Icon>
@@ -178,8 +176,8 @@
                 </MenuItem>
             </MenuItem>
         </Menu>
-        <DockPanel Grid.Row="1" Grid.ColumnSpan="2">
-            <Button  Background="AliceBlue" ToolTip="Download New"  >
+        <DockPanel Grid.Row="1" Grid.ColumnSpan="2" Height="35">
+           <!-- <Button  Background="AliceBlue" ToolTip="Download New"  >
                 <Image Source="Resources/Pictures/bug.png"></Image>
             </Button>
             <Button  Background="AliceBlue" ToolTip="Open (default)">
@@ -193,7 +191,7 @@
             </Button>
             <Button  Background="AliceBlue" ToolTip="Update (local)">
                 <Image Source="Resources/Pictures/bug.png"></Image>
-            </Button>
+            </Button>-->
             <Rectangle Fill="AliceBlue">
                 
             </Rectangle>
@@ -214,13 +212,13 @@
                         </StackPanel>
                     </TabItem.Header>
                     <TabItem.Content>
-                         <DataGrid Grid.Column="0"  Name="dgAllThreatsList" 
+                         <DataGrid Grid.Column="0"  Name="_dgAllThreatsList" 
                           MinHeight="175" IsReadOnly="True" 
                           RowBackground="White" AreRowDetailsFrozen="True" 
                           AlternatingRowBackground="#FFC5F1FB"
-                          AutoGenerateColumns="False" SelectionChanged="dgAllThreatsList_SelectionChanged" SelectionMode="Single">
+                          AutoGenerateColumns="False" SelectionChanged="_dgAllThreatsList_SelectionChanged" SelectionMode="Single">
                             <DataGrid.Columns>
-                                <DataGridTextColumn MinWidth="25" Binding="{Binding Id}" Header="ID угрозы"/>
+                                <DataGridTextColumn MinWidth="25" MaxWidth="70"  Binding="{Binding Id}" Header="ID угрозы"/>
                                 <DataGridTextColumn Width="*" Binding="{Binding Name}" Header="Наименование">
                                     <DataGridTextColumn.ElementStyle>
                                         <Style>
@@ -234,7 +232,7 @@
                         </DataGrid>
                     </TabItem.Content>
                 </TabItem>
-                <TabItem x:Name="tbUpdatedThreats">
+                <TabItem x:Name="_tbUpdatedThreats">
                     <TabItem.Header>
                         <StackPanel Orientation="Horizontal">
                             <Rectangle Height="10" Width="10" Fill="Black" />
@@ -242,13 +240,13 @@
                         </StackPanel>
                     </TabItem.Header>
                     <TabItem.Content>
-                        <DataGrid Grid.Column="0"  Name="dgChangesList" 
+                        <DataGrid Grid.Column="0"  Name="_dgChangedList" 
                           MinHeight="175" IsReadOnly="True" 
                           RowBackground="White" AreRowDetailsFrozen="True" 
                           AlternatingRowBackground="#FFC5F1FB"
-                          AutoGenerateColumns="False" SelectionChanged="dgUpdatedList_SelectionChanged" SelectionMode="Single">
+                          AutoGenerateColumns="False" SelectionChanged="_dgChangedList_SelectionChanged" SelectionMode="Single">
                             <DataGrid.Columns>
-                                <DataGridTextColumn MinWidth="25" Binding="{Binding Id}" Header="ID угрозы"/>
+                                <DataGridTextColumn MinWidth="25" MaxWidth="70" Binding="{Binding Id}" Header="ID угрозы"/>
                                 <DataGridTextColumn Width="*" Binding="{Binding Name}" Header="Наименование">
                                     <DataGridTextColumn.ElementStyle>
                                         <Style>
@@ -266,10 +264,10 @@
 
 
 
-            <DataGrid Grid.Column="2"  Name="dgSupport" MinHeight="175" 
-                       AutoGenerateColumns="False">
+            <DataGrid Grid.Column="2"  Name="_dgSupport" MinHeight="175" 
+                       AutoGenerateColumns="False" EnableColumnVirtualization="True" IsReadOnly="True" SelectionMode="Single">
                 <DataGrid.Columns>
-                    <DataGridTextColumn MinWidth="100" Binding="{Binding Path=Item1}"  Header="Тип">
+                    <DataGridTextColumn MinWidth="100" MaxWidth="150" Binding="{Binding Path=Item1}"  Header="Тип">
                         <DataGridTextColumn.ElementStyle>
                             <Style>
                                 <Setter Property="TextBlock.TextWrapping" Value="Wrap">

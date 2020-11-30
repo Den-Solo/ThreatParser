@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Lab2_GUI"
         mc:Ignorable="d"
-        Title="UserMessageWnd" Height="100" Width="150"
+        Title="UserMessageWnd" Height="150" Width="200"
         ResizeMode="NoResize"
         WindowStyle="None"
         Closing="Window_Closing">
@@ -17,18 +17,17 @@
             </LinearGradientBrush>
         </Grid.Background>
 
-        <TextBlock x:Name="_tbHeader" HorizontalAlignment="Left" Margin="10,77,0,0" 
+        <TextBlock x:Name="_tbHeader" HorizontalAlignment="Left" Margin="10,124,0,0" 
                    TextWrapping="Wrap" 
                    VerticalAlignment="Top" Width="95" Foreground="White"><Run Text="IS Threat "/><Run Text="Parser"/></TextBlock>
-        <TextBox x:Name="_tbContent" HorizontalAlignment="Left" Height="63" Margin="10,9,0,0" TextWrapping="Wrap" Text="TextBox" VerticalAlignment="Top" Width="84" Background="{x:Null}" BorderBrush="{x:Null}" Foreground="White" IsEnabled="False"/>
-        <Image Source="Resources/Icons/security-shield .ico" HorizontalAlignment="Left" Height="31" Margin="111,59,0,0" VerticalAlignment="Top" Width="29"/>
-        <Button x:Name="_Exit" Content="X" HorizontalAlignment="Left"
-                Margin="118,8,0,0" VerticalAlignment="Top" Width="16"
-                Height="18" 
+        <TextBlock x:Name="_tbContent" HorizontalAlignment="Left" Height="110" Margin="10,9,0,0" TextWrapping="Wrap" Text="TextBox" VerticalAlignment="Top" Width="152" Background="{x:Null}" Foreground="White" />
+        <Image Source="Resources/Icons/security-shield .ico" HorizontalAlignment="Left" Height="31" Margin="161,109,0,0" VerticalAlignment="Top" Width="29"/>
+        <Button Content="X" x:Name="_Exit"  HorizontalAlignment="Left"
+                Margin="167,10,0,0" VerticalAlignment="Top" Width="16"
+                Height="17" 
                 Background="{x:Null}" BorderBrush="{x:Null}"
                 Foreground="White"
                 Click="_Exit_Click">
-
         </Button>
 
     </Grid>

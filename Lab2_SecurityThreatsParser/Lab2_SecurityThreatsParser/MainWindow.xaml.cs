@@ -27,13 +27,17 @@ namespace Lab2_GUI
     public partial class MainWindow : Window
     {
         //private
-        public const int _MAX_PAGES = 10000;
-        public static string[] _ComboBoxPageVals {  get; } = new string[5] { "15", "30", "45", "90", "All" };
-        private int _tcPrevSelectedIdx = 0;
-        private UserMessageWnd _userMessageWnd = null;
+        public const int _MAX_PAGES = 10000;                        //value greater than possible rows.Count in table; used as "All"
+        private const int _UPDATE_INTERVAL_HOUR = 0;
+        private const int _UPDATE_INTERVAL_MIN = 5;
+        private const int _UPDATE_INTERVAL_SEC = 0;
+        public static string[] _ComboBoxPageVals { get; } = new string[5] { "15", "30", "45", "90", "All" };
+        private int _tcPrevSelectedIdx = 0;                         //to avoid unnecessary combobox updates
+        private UserMessageWnd _userMessageWnd = null;              //only one or zero msgWnd allowed at a moment
         private TableProcessor _table = new TableProcessor();
         private Paginator _paginatorNormal = null;
         private Paginator _paginatorChanges = null;
+        private WinRegBasedTimer timer = null;
 
         private int _ElementsOnPageComboBox
         {
@@ -41,11 +45,8 @@ namespace Lab2_GUI
             {
                 int idx = this._cbElemsOnPageCnt.SelectedIndex;
                 int res = -1;
-                if (idx == -1)
-                {
-                    throw new InvalidOperationException();
-                }
-                if (int.TryParse(_ComboBoxPageVals[idx],out res))
+                if (idx == -1) { throw new InvalidOperationException(); }
+                if (int.TryParse(_ComboBoxPageVals[idx], out res))
                 {
                     return res;
                 }
@@ -55,31 +56,11 @@ namespace Lab2_GUI
                 }
             }
         }
-        private int _CurSelectedThreatIdAll
-        {
-            get
-            {
-                TableProcessor.ShortInfo si = (TableProcessor.ShortInfo)this.dgAllThreatsList.SelectedItem;
-                if (si == null)
-                {
-                    return 0;
-                }
-                return int.Parse(si.Id.Substring(4));
-            }
-        }
-        private int _CurSelectedThreatIdChanged
-        {
-            get
-            {
-                TableProcessor.ShortInfo si = (TableProcessor.ShortInfo)this.dgChangesList.SelectedItem;
-                return int.Parse(si.Id.Substring(4));
-            }
-        }
-        private TableProcessor.FullInfo fullInfoList = null;
+
 
         //constructors
         public MainWindow()
-        { 
+        {
             InitializeComponent();
             this.WindowStartupLocation = WindowStartupLocation.CenterScreen;
             this.DataContext = this;
@@ -87,16 +68,16 @@ namespace Lab2_GUI
 
             this._Prev.IsEnabled = false;
             this._Next.IsEnabled = false;
-            this.tbUpdatedThreats.IsEnabled = false;
+            this._tbUpdatedThreats.IsEnabled = false;
 
-            this.dgAllThreatsList.EnableColumnVirtualization = true;
-            this.dgAllThreatsList.EnableRowVirtualization = true;
-            this.dgAllThreatsList.MaxHeight = 5000;
-            this.dgAllThreatsList.MaxWidth = 5000;
-            this.dgSupport.EnableColumnVirtualization = true;
-            this.dgSupport.EnableRowVirtualization = true;
-            this.dgChangesList.EnableColumnVirtualization = true;
-            this.dgChangesList.EnableRowVirtualization = true;
+            this._dgAllThreatsList.EnableColumnVirtualization = true;
+            this._dgAllThreatsList.EnableRowVirtualization = true;
+            this._dgSupport.EnableColumnVirtualization = true;
+            this._dgSupport.EnableRowVirtualization = true;
+            this._dgChangedList.EnableColumnVirtualization = true;
+            this._dgChangedList.EnableRowVirtualization = true;
+
+            this._dgSupport.ItemsSource = new TableProcessor.FullInfo();
 
             this.MainGrid.Focus();
             Loaded += MainWindow_Loaded;
@@ -109,8 +90,25 @@ namespace Lab2_GUI
             Dispatcher.BeginInvoke(new Action(() =>
             {
                 OpenOnStart();
+                timer = new WinRegBasedTimer(new TimeSpan(_UPDATE_INTERVAL_HOUR, _UPDATE_INTERVAL_MIN, _UPDATE_INTERVAL_SEC), this.UpdateEventHandler, this);
             })));
+            
         }
+        private void UpdateEventHandler()
+        {
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                if (_table.CanUpdate)
+                {
+                    var res = MessageBox.Show(this,"Пришло время обновиться...\nХотите продолжить?", "Плановое обновление", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                    if (res == MessageBoxResult.Yes)
+                    {
+                        _UpdateWeb_Click(null, null);
+                    }
+                }
+            }));
+        }
+
         private void OpenOnStart()
         {
             if (!LoadOrOpen(TableProcessor.LoadMode.OpenExisting, default))
@@ -130,77 +128,18 @@ namespace Lab2_GUI
             _userMessageWnd?.Close();
         }
 
-        void Save() { }
-
-
-        private void CmdNew_Executed(object sender, ExecutedRoutedEventArgs e)
+        private int GetSelectedThreatId(TableProcessor.ContentMode m)
         {
-            LoadOrOpen(TableProcessor.LoadMode.DownloadNew, default);
-        }
-        private void CmdOpen_Executed(object sender, ExecutedRoutedEventArgs e)
-        {
-            LoadOrOpen(TableProcessor.LoadMode.OpenExisting, default);
-        }
-        private bool LoadOrOpen(TableProcessor.LoadMode lm, string path)
-        {
-            if (!_table.LoadOrOpen(lm, path))
+            TableProcessor.ShortInfo si = null;
+            if (m == TableProcessor.ContentMode.Normal)
             {
-                UserMsgWndShow("Что-то пошло не так!");
-                return false;
-            }
-            if (TableProcessor.LoadModeToContentMode(lm) == TableProcessor.ContentMode.Normal)
-            {
-                this._tcThreatsList.SelectedIndex = 0;
-                this.tbUpdatedThreats.IsEnabled = false;
-                _paginatorNormal = new Paginator(this.dgAllThreatsList, _table.GetShortContent(TableProcessor.ContentMode.Normal), _ElementsOnPageComboBox);
-                this._Next.IsEnabled = _paginatorNormal.Next();
-                this._Prev.IsEnabled = _paginatorNormal.CanGoPrev;
+                si = (TableProcessor.ShortInfo)this._dgAllThreatsList.SelectedItem;
             }
             else
             {
-                this._tcThreatsList.SelectedIndex = 1;
-                this.tbUpdatedThreats.IsEnabled = true;
-                _paginatorChanges = new Paginator(this.dgChangesList, _table.GetShortContent(TableProcessor.ContentMode.Changed), _ElementsOnPageComboBox);
-                this._Next.IsEnabled = _paginatorChanges.Next();
-                this._Prev.IsEnabled = _paginatorChanges.CanGoPrev;
+                si = (TableProcessor.ShortInfo)this._dgChangedList.SelectedItem;
             }
-
-            if (TableProcessor.LoadModeToContentMode(lm) == TableProcessor.ContentMode.Normal) 
-            {
-                UserMsgWndShow((lm == TableProcessor.LoadMode.OpenExisting ? "Открыто успешно!" : "Загружено успешно!"));
-            }
-            else
-            {
-                UserMsgWndShow("Обновлено успешно!");
-            }
-            return true;
-        }
-        private void _UpdateWeb_Click(object sender, RoutedEventArgs e)
-        {
-            LoadOrOpen(TableProcessor.LoadMode.DownloadUpdate, default);
-            this.tbUpdatedThreats.IsEnabled = true;
-        }
-        private void _UpdateLocal_Click(object sender, RoutedEventArgs e)
-        {
-            Microsoft.Win32.OpenFileDialog dlg = new Microsoft.Win32.OpenFileDialog();
-            dlg.FileName = "Document"; // Default file name
-            dlg.DefaultExt = ".txt"; // Default file extension
-            dlg.Filter = "Excel files|*.xls;*.xlsx;|All|*.*"; // Filter files by extension
-            Nullable<bool> result = dlg.ShowDialog();
-            if (result == true)
-            {
-                LoadOrOpen(TableProcessor.LoadMode.OpenUpdate, dlg.FileName);
-                this.tbUpdatedThreats.IsEnabled = true;
-            }
-        }
-        private void CmdSave_Executed(object sender, ExecutedRoutedEventArgs e)
-        {
-            MessageBox.Show("Save", "", MessageBoxButton.OK);
-        }
-
-        private void MenuItemBugReport_Click(object sender, RoutedEventArgs e)
-        {
-            BugReporter.CollectAndSend();
+            return int.Parse(si.Id.Substring(4));
         }
         private ref Paginator CurPaginator()
         {
@@ -213,55 +152,13 @@ namespace Lab2_GUI
                 return ref _paginatorChanges;
             }
         }
-        private ref Paginator GetPaginator(TableProcessor.ContentMode cm)
-        {
-            if (cm == TableProcessor.ContentMode.Normal)
-            {
-                return ref _paginatorNormal;
-            }
-            else
-            {
-                return ref _paginatorChanges;
-            }
-        }
-        private void BtnPrev_Clicked(object sender, RoutedEventArgs e)
-        {
-            Paginator p = CurPaginator();
-            this._Prev.IsEnabled = p.Prev();
-            this._Next.IsEnabled = p.CanGoNext;
-        }
-        private void BtnNext_Clicked(object sender, RoutedEventArgs e)
-        {
-            Paginator p = CurPaginator();
-            this._Next.IsEnabled = p.Next();
-            this._Prev.IsEnabled = p.CanGoPrev;
-        }
-
-        private void _cbElemsOnPageCnt_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            Paginator p = CurPaginator();
-            if (p != null)
-            {
-                p.Update(_ElementsOnPageComboBox);
-                this._Prev.IsEnabled = p.CanGoPrev;
-                this._Next.IsEnabled = p.CanGoNext;
-            }
-        }
-        private void dgAllThreatsList_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            UpdateDgSupport((DataGrid)sender);
-        }
-        private void dgUpdatedList_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            UpdateDgSupport((DataGrid)sender);
-        }
-        private static int ComboBoxIdxFromPaginator(ComboBox cb,Paginator p)
+        private static int ComboBoxIdxFromPaginator(ComboBox cb, Paginator p)
         {
             if (p == null)
             {
                 return 0;
             }
-            int idx = Array.IndexOf(_ComboBoxPageVals, p.CurElementsOnPageCnt_.ToString());
+            int idx = Array.IndexOf(_ComboBoxPageVals, p._ElementsOnPageCnt.ToString());
             if (idx != -1)
             {
                 return idx;
@@ -271,9 +168,163 @@ namespace Lab2_GUI
                 return _ComboBoxPageVals.Length - 1;
             }
         }
+        private TableProcessor.ContentMode ContentModeFromTcThreatsList()
+        {
+            return _tcThreatsList.SelectedIndex == 0 ? TableProcessor.ContentMode.Normal : TableProcessor.ContentMode.Changed;
+        }
+        private void CmdNew_Executed(object sender, ExecutedRoutedEventArgs e)
+        {
+            LoadOrOpen(TableProcessor.LoadMode.DownloadNew, default);
+        }
+        private void CmdOpen_Executed(object sender, ExecutedRoutedEventArgs e)
+        {
+            LoadOrOpen(TableProcessor.LoadMode.OpenExisting, default);
+        }
+        private bool LoadOrOpen(TableProcessor.LoadMode lm, string path)
+        {
+            var status = _table.LoadOrOpen(lm, path);
+            {
+                string msg = "";
+                switch (status)
+                {
+                    case TableProcessor.LoadStatus.NetWorkProblems:
+                        msg = "Что-то пошло не так!\nСеть накрылась!";
+                        break;
+                    case TableProcessor.LoadStatus.FileProblems:
+                        msg = "Что-то пошло не так!\nПроблемы с файлом!\nСтоит попробовать другой...";
+                        break;
+                }
+                if (status != TableProcessor.LoadStatus.OK)
+                {
+                    UserMsgWndShow(msg);
+                    return false;
+                }
+            }
+            if (TableProcessor.LoadModeToContentMode(lm) == TableProcessor.ContentMode.Normal)
+            {
+                this._tcThreatsList.SelectedIndex = 0;
+                this._tbUpdatedThreats.IsEnabled = false;
+                _paginatorNormal = new Paginator(this._dgAllThreatsList, _table.GetShortContent(TableProcessor.ContentMode.Normal), _ElementsOnPageComboBox);
+                this._Next.IsEnabled = _paginatorNormal.Next();
+                this._Prev.IsEnabled = _paginatorNormal._CanGoPrev;
+            }
+            else
+            {
+                _paginatorNormal = new Paginator(this._dgAllThreatsList, _table.GetShortContent(TableProcessor.ContentMode.Normal), _ElementsOnPageComboBox);
+                this._tcThreatsList.SelectedIndex = 0;
+                BtnNext_Clicked(this._dgAllThreatsList, null);
+
+                this._tbUpdatedThreats.IsEnabled = true;
+
+                _paginatorChanges = new Paginator(this._dgChangedList, _table.GetShortContent(TableProcessor.ContentMode.Changed), _ElementsOnPageComboBox);
+                this._tcThreatsList.SelectedIndex = 1;
+                BtnNext_Clicked(this._dgChangedList, null);
+            }
+
+            if (TableProcessor.LoadModeToContentMode(lm) == TableProcessor.ContentMode.Normal)
+            {
+                UserMsgWndShow((lm == TableProcessor.LoadMode.OpenExisting ? "Открыто успешно!" : "Загружено успешно!"));
+            }
+            else
+            {
+                if (_paginatorChanges._DataLength > 0) 
+                {
+                    UserMsgWndShow($"Обновлено успешно!\nОбновленных записей: {_paginatorChanges._DataLength}"); 
+                }
+                else
+                {
+                    UserMsgWndShow($"Обновлено успешно!\nВот только ничего не обновилось...\nКак часто ФСТЭК делает обновы???");
+                }
+            }
+            return true;
+        }
+        private void _UpdateWeb_Click(object sender, RoutedEventArgs e)
+        {
+            if (!_table.CanUpdate)
+            {
+                UserMsgWndShow("Нечего обновлять!");
+                return;
+            }
+            LoadOrOpen(TableProcessor.LoadMode.DownloadUpdate, default);
+        }
+        private void _UpdateLocal_Click(object sender, RoutedEventArgs e)
+        {
+            if (!_table.CanUpdate)
+            {
+                UserMsgWndShow("Нечего обновлять!");
+                return;
+            }
+            string path = FileDialogOpenShow();
+            if (path != null)
+            {
+                LoadOrOpen(TableProcessor.LoadMode.OpenUpdate, path);
+            }
+        }
+        private void CmdSaveAs_Executed(object sender, ExecutedRoutedEventArgs e)
+        {
+            if (!_table.CanUpdate)
+            {
+                UserMsgWndShow("Нечего сохранять!");
+                return;
+            }
+            string path = FileDialogSaveShow();
+            if (path == null)
+            {
+                UserMsgWndShow("Не хотите, как хотите....!");
+            }
+            else
+            {
+                if (_table.SaveAs(path))
+                {
+                    UserMsgWndShow("Успешно сохранено!");
+                }
+                else
+                {
+                    UserMsgWndShow("Ну знаете!!!\nСохранять файл сам в себя это уже тавтология!!!");
+                }
+            }
+        }
+
+        private void MenuItemBugReport_Click(object sender, RoutedEventArgs e)
+        {
+            BugReporter.CollectAndSend();
+        }
+
+        private void BtnPrev_Clicked(object sender, RoutedEventArgs e)
+        {
+            Paginator p = CurPaginator();
+            this._Prev.IsEnabled = p.Prev();
+            this._Next.IsEnabled = p._CanGoNext;
+        }
+        private void BtnNext_Clicked(object sender, RoutedEventArgs e)
+        {
+            Paginator p = CurPaginator();
+            this._Next.IsEnabled = p.Next();
+            this._Prev.IsEnabled = p._CanGoPrev;
+        }
+
+        private void _cbElemsOnPageCnt_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            Paginator p = CurPaginator();
+            if (p != null)
+            {
+                p.Update(_ElementsOnPageComboBox);
+                this._Prev.IsEnabled = p._CanGoPrev;
+                this._Next.IsEnabled = p._CanGoNext;
+            }
+        }
+        private void _dgAllThreatsList_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            Update_dgSupport((DataGrid)sender);
+        }
+        private void _dgChangedList_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            Update_dgSupport((DataGrid)sender);
+        }
+
         private void _tcThreatsList_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (_tcPrevSelectedIdx == _tcThreatsList.SelectedIndex)
+            if (_tcPrevSelectedIdx != _tcThreatsList.SelectedIndex)
             {
                 return;
             }
@@ -282,36 +333,22 @@ namespace Lab2_GUI
                 _tcPrevSelectedIdx = 1 - _tcThreatsList.SelectedIndex;
             }
 
-            Paginator p = null;
-            if (_tcThreatsList.SelectedIndex == 0)
-            {
-                p = _paginatorNormal;
-            }
-            else
-            {
-                p = _paginatorChanges;
-            }
+            Paginator p = CurPaginator();
             if (p != null)
             {
                 this._cbElemsOnPageCnt.SelectedIndex = ComboBoxIdxFromPaginator(this._cbElemsOnPageCnt, p);
-                this._Prev.IsEnabled = p.CanGoPrev;
-                this._Next.IsEnabled = p.CanGoNext;
+                this._Prev.IsEnabled = p._CanGoPrev;
+                this._Next.IsEnabled = p._CanGoNext;
             }
         }
-        private void UpdateDgSupport(DataGrid sender)
+        private void Update_dgSupport(DataGrid sender)
         {
             if (sender.SelectedItem != null)
             {
-                this.dgSupport.ItemsSource = null;
-                TableProcessor.ContentMode m = TableProcessor.ContentMode.Normal;
-                int threatId = _CurSelectedThreatIdAll;
-                if (this._tcThreatsList.SelectedIndex == 1)
-                {
-                    m = TableProcessor.ContentMode.Changed;
-                    threatId = _CurSelectedThreatIdChanged;
-                }
-                fullInfoList = _table.GetFullContent(m, threatId);
-                this.dgSupport.ItemsSource = fullInfoList;
+                this._dgSupport.ItemsSource = null;
+                TableProcessor.ContentMode m = ContentModeFromTcThreatsList();
+                int threatId = GetSelectedThreatId(m);
+                this._dgSupport.ItemsSource = _table.GetFullContent(m, threatId); ;
             }
         }
         private void MenuItemAbout_Click(object sender, RoutedEventArgs e)
@@ -328,6 +365,32 @@ namespace Lab2_GUI
             _userMessageWnd?.Close();
             _userMessageWnd = new UserMessageWnd(this, content);
             _userMessageWnd.Show();
+        }
+        private string FileDialogOpenShow()
+        {
+            Microsoft.Win32.OpenFileDialog dlg = new Microsoft.Win32.OpenFileDialog();
+            dlg.FileName = "Document"; // Default file name
+            dlg.DefaultExt = ".xlsx"; // Default file extension
+            dlg.Filter = "Excel files|*.xls;*.xlsx;|All|*.*"; // Filter files by extension
+            var result = dlg.ShowDialog();
+            if (result.HasValue && result.Value)
+            {
+                return dlg.FileName;
+            }
+            return null;
+        }
+        private string FileDialogSaveShow()
+        {
+            Microsoft.Win32.SaveFileDialog dlg = new Microsoft.Win32.SaveFileDialog();
+            dlg.FileName = "Document"; // Default file name
+            dlg.DefaultExt = ".xlsx"; // Default file extension
+            dlg.Filter = "Excel files|*.xlsx;*.xls;|All|*.*"; // Filter files by extension
+            var result = dlg.ShowDialog();
+            if (result.HasValue && result.Value)
+            {
+                return dlg.FileName;
+            }
+            return null;
         }
         private void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e) => e.Cancel = false;
         private void MenuItemExit_Clicked(object sender, RoutedEventArgs e) => this.Close();

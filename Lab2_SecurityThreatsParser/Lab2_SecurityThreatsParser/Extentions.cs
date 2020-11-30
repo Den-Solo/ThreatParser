@@ -10,7 +10,10 @@ namespace Lab2_SecurityThreatsParser
     {
         public static T[] SubArray<T>(this T[] data, int index, int length) //Safe for wrong index and size
         {
-
+            if (index < 0 || length <= 0)
+            {
+                return new T[0];
+            }
             T[] result = new T[length];
             Array.Copy(data, index, result, 0, length);
             return result;

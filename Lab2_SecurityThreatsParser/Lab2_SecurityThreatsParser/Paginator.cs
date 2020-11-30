@@ -9,79 +9,68 @@ namespace Lab2_GUI
 {
     public class Paginator
     {
-        private int firstIdx_ = 0;                  
-        public int CurElementsOnPageCnt_ { get; private set; } = 0;
-        private DataGrid dataGrid_ = null;          //dataGrid to work with
-        private object[] data_ = null;              //object array to paginate
-        public bool CanGoPrev 
-        { 
-            get 
-            {
-                return firstIdx_ != 0;
-            }
-        }
-        public bool CanGoNext
-        {
-            get
-            {
-                return firstIdx_ + CurElementsOnPageCnt_ < data_.Length;
-            }
-        }
-
+        private int _firstIdx = 0;                  
+        public int _ElementsOnPageCnt { get; private set; } = 0;    //val which was set by Update()
+        public int _realElementsOnPageCnt = 0;                      //real val based on data.Length
+        private DataGrid _dataGrid = null;                          //dataGrid to work with
+        private object[] _data = null;                              //object array to paginate
+        public bool _CanGoPrev  {  get { return _firstIdx != 0; } }
+        public bool _CanGoNext { get { return _firstIdx + _realElementsOnPageCnt < _data.Length; } }
+        public int _DataLength { get; set; }
         public Paginator(DataGrid dataGrid, object[] data, int elementsOnPage)
         {
-            dataGrid_ = dataGrid;
-            dataGrid_.ItemsSource = new List<object>() { new TableProcessor.ShortInfo("","Нет записей")};     
-            this.data_ = data;
-            this.CurElementsOnPageCnt_ = elementsOnPage;
-            this.firstIdx_ -= elementsOnPage;           // to start from beginning with Next() firstIdx must be neg(elementsOnPage)
+            _DataLength = data.Length;
+            this._dataGrid = dataGrid;
+            this._data = ((data == null || data.Length == 0) ? new object[] { new TableProcessor.ShortInfo("XXX.000", "Нет записей") } : data);
+            this._ElementsOnPageCnt = elementsOnPage;
+            this._realElementsOnPageCnt = Math.Min(elementsOnPage, this._data.Length);
+            this._firstIdx -= this._realElementsOnPageCnt;           // to start from beginning with Next() firstIdx must be neg(elementsOnPage)
         }
         public bool Next()
         {
-            firstIdx_ += CurElementsOnPageCnt_;
-            if (firstIdx_ > data_.Length)
+            _firstIdx += _realElementsOnPageCnt;
+            if (_firstIdx > _data.Length)
             {
-                firstIdx_ = data_.Length;
+                _firstIdx = _data.Length;
             }
-            int len = (firstIdx_ + CurElementsOnPageCnt_ <= data_.Length ? CurElementsOnPageCnt_ : data_.Length - firstIdx_);
+            int len = (_firstIdx + _realElementsOnPageCnt <= _data.Length ? _realElementsOnPageCnt : _data.Length - _firstIdx);
             if (len > 0)
             {
-                DataGridSetRows(dataGrid_, Extentions.SubArray(data_, firstIdx_, len).ToList());
+                DataGridSetRows(_dataGrid, Extentions.SubArray(_data, _firstIdx, len).ToList());
             }
-            return CanGoNext;
+            return _CanGoNext;
         }
         public bool Prev()
         {
-            firstIdx_ -= CurElementsOnPageCnt_;
-            if (firstIdx_ < 0)
+            _firstIdx -= _realElementsOnPageCnt;
+            if (_firstIdx < 0)
             {
-                firstIdx_ = 0;
+                _firstIdx = 0;
             }
-            int len = (firstIdx_ + CurElementsOnPageCnt_ <= data_.Length ? CurElementsOnPageCnt_ : data_.Length - firstIdx_);
-            DataGridSetRows(dataGrid_, Extentions.SubArray(data_, firstIdx_, len).ToList());
-            return CanGoPrev;
+            int len = (_firstIdx + _realElementsOnPageCnt <= _data.Length ? _realElementsOnPageCnt : _data.Length - _firstIdx);
+            DataGridSetRows(_dataGrid, Extentions.SubArray(_data, _firstIdx, len).ToList());
+            return _CanGoPrev;
         }
 
         public void Update(int newElementsOnPageCnt)
         {
-            if (newElementsOnPageCnt > data_.Length)
+            _ElementsOnPageCnt = newElementsOnPageCnt;
+            if (newElementsOnPageCnt > _data.Length)
             {
-                newElementsOnPageCnt = data_.Length;
+                newElementsOnPageCnt = _data.Length;
             }
-            CurElementsOnPageCnt_ = newElementsOnPageCnt;
-            if (firstIdx_ + CurElementsOnPageCnt_ > data_.Length)
+            _realElementsOnPageCnt = newElementsOnPageCnt;
+            if (_firstIdx + _realElementsOnPageCnt > _data.Length)
             {
-                firstIdx_ = data_.Length - CurElementsOnPageCnt_;
+                _firstIdx = _data.Length - _realElementsOnPageCnt;
             }
-            firstIdx_ -= CurElementsOnPageCnt_;
+            _firstIdx -= _realElementsOnPageCnt;
             Next();
         }
         private static void DataGridSetRows(DataGrid dg, in List<object> newRows)
         {
-            var container = (List<object>)dg.ItemsSource;
             dg.ItemsSource = null;
-            container = newRows;
-            dg.ItemsSource = container;
+            dg.ItemsSource = newRows;
         }
     }
 }

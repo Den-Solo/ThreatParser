@@ -22,14 +22,15 @@ namespace Lab2_SecurityThreatsParser
         private readonly static string _defaultTablePath = Directory.GetCurrentDirectory() + "\\" + _defaultTableName;
         public string CurrentTablePath { get; private set; } = null;
         public string CurrentTableName { get; private set; } = null;
-        public bool IsUpdated { get; private set; } = false;
+        public bool CanUpdate { get; private set; } = false;
+        
         private string[] _headers;
         private ThreatContent[] _tableContentNormal;
         private ThreatContent[] _tableContentChanged;
 
-        private DataSet tableDataSet_ = null;
+        private DataSet GetTableContentSet_ = null;
 
-        public enum LoadMode 
+        public enum LoadMode
         {
             DownloadNew,
             OpenExisting,
@@ -40,6 +41,12 @@ namespace Lab2_SecurityThreatsParser
         {
             Normal,     //values displayed in main grid - all threats
             Changed     //threats which were changed by updated vals
+        }
+        public enum LoadStatus
+        {
+            OK,
+            NetWorkProblems,
+            FileProblems
         }
 
         public static ContentMode LoadModeToContentMode(LoadMode lm)
@@ -53,43 +60,72 @@ namespace Lab2_SecurityThreatsParser
                 return ContentMode.Changed;
             }
         }
-        public bool LoadOrOpen(LoadMode lm, string localPath)
+        private ThreatContent[] GetTableContent(ContentMode m)
         {
-            if (lm == LoadMode.DownloadUpdate || lm == LoadMode.OpenUpdate)
+            switch (m)
             {
-                File.Delete(CurrentTablePath + ".deprecated");
-                File.Move(CurrentTablePath, CurrentTablePath + ".deprecated");
-                if (!string.IsNullOrEmpty(localPath) && localPath != _defaultTablePath)
+                case ContentMode.Normal:
+                    return _tableContentNormal;
+                case ContentMode.Changed:
+                    return _tableContentChanged;
+                default:
+                    return null;
+            }
+        }
+        public LoadStatus LoadOrOpen(LoadMode lm, string localPath)
+        {
+            if (LoadModeToContentMode(lm) == ContentMode.Changed)
+            {
+                if (!CanUpdate)
                 {
-                    File.Copy(localPath, _defaultTablePath);
-                    localPath = null;
+                    throw new InvalidOperationException("No update before first load");
+                }
+                if (LoadModeToContentMode(lm) == ContentMode.Changed && localPath == CurrentTablePath)
+                {
+                    return LoadStatus.FileProblems;
+                }
+                File.Delete(CurrentTablePath + ".deprecated");              //deleted forever
+                if (File.Exists(CurrentTablePath))
+                {
+                    File.Move(CurrentTablePath, CurrentTablePath + ".deprecated");
                 }
             }
-            if (string.IsNullOrWhiteSpace(localPath))
+            if (!string.IsNullOrWhiteSpace(localPath) && (lm == LoadMode.OpenExisting || lm == LoadMode.OpenUpdate))
             {
-                CurrentTableName = _defaultTableName;
-                CurrentTablePath = _defaultTablePath;
+                File.Copy(localPath, _defaultTablePath);    //Database will always be in current working dir
+                localPath = null;
             }
-            else //in current program state it never gets here
-            {
-                CurrentTableName = localPath.Split('\\').Last();
-                CurrentTablePath = localPath;
-            }
+            CurrentTableName = _defaultTableName;   //it must be different but i rejected that idea
+            CurrentTablePath = _defaultTablePath;   //so yeah CurrentTableName and  CurrentTablePath are always default // waiting for refactoring
+            bool isException = false;
             try
             {
                 if (lm == LoadMode.DownloadNew || lm == LoadMode.DownloadUpdate)
                 {
-                    LoadNewTableWeb(TableProcessor._defaultUri, CurrentTableName);
+                    LoadNewTableWeb(TableProcessor._defaultUri, CurrentTablePath);
                 }
                 OpenExcelTable();
                 ReadTableAll(LoadModeToContentMode(lm));
-                tableDataSet_ = null;
+            }
+            catch (WebException)
+            {
+                isException = true;
+                return LoadStatus.NetWorkProblems;
             }
             catch (Exception)
             {
-                return false;
+                isException = true;
+                return LoadStatus.FileProblems;
             }
-            return true;
+            finally
+            {
+                if (isException && File.Exists(CurrentTablePath + ".deprecated"))
+                {
+                    File.Move(CurrentTablePath + ".deprecated", CurrentTablePath); //shit, go back, go back (if download failed)
+                }
+            }
+            CanUpdate = true;
+            return LoadStatus.OK;
         }
         public void OpenExcelTable() // CurrentTablePath must be set correctly before
         {
@@ -97,7 +133,7 @@ namespace Lab2_SecurityThreatsParser
             {
                 using (var reader = ExcelReaderFactory.CreateReader(fs))
                 {
-                    tableDataSet_ = reader.AsDataSet();
+                    GetTableContentSet_ = reader.AsDataSet();
                 }
             }
         }
@@ -105,16 +141,16 @@ namespace Lab2_SecurityThreatsParser
         {
             if (m == ContentMode.Normal)
             {
-                ReadHeader(tableDataSet_,ref _headers);
-                ReadAllLines(tableDataSet_,ref  _tableContentNormal);
+                ReadHeader(GetTableContentSet_,ref _headers);
+                ReadAllLines(GetTableContentSet_,ref  _tableContentNormal);
             }
             else
             {
                 _tableContentChanged = _tableContentNormal;
-                ReadAllLines(tableDataSet_,ref _tableContentNormal);
+                ReadAllLines(GetTableContentSet_,ref _tableContentNormal);
                 _tableContentChanged = GetUpdatedThreats(_tableContentNormal, _tableContentChanged);
             }
-            
+            GetTableContentSet_ = null;
         }
         private static void ReadHeader(in DataSet src,ref string[] dest)
         {
@@ -151,7 +187,7 @@ namespace Lab2_SecurityThreatsParser
                         }
                         else
                         {
-                            result.Last().content[j] = "#БЫЛО:\n\n" + outdated[i].content[j] + "\n\n#Стало:\n\n" + updated[i].content[j];
+                            result.Last().content[j] = "###БЫЛО:\n\n" + outdated[i].content[j] + "\n\n###СТАЛО:\n\n" + updated[i].content[j];
                         }
                     }
                 }
@@ -174,7 +210,7 @@ namespace Lab2_SecurityThreatsParser
                     }
                     for (int i = len; i < refTmp.Length; ++i)
                     {
-                        result.Add(refTmp[i]);
+                        result.Add(new ThreatContent((string[])refTmp[i].content.Clone()));
                         result.Last().content[1] = info + result.Last().content[1];
                     }
                 }
@@ -194,7 +230,7 @@ namespace Lab2_SecurityThreatsParser
 
         public ShortInfo[] GetShortContent(ContentMode m)
         {
-            ThreatContent[] data = TableData(m);
+            ThreatContent[] data = GetTableContent(m);
             if (data == null)
             {
                 throw new InvalidOperationException();
@@ -206,22 +242,11 @@ namespace Lab2_SecurityThreatsParser
             }
             return result;
         }
-        private ThreatContent[] TableData(ContentMode m)
-        {
-            switch (m)
-            {
-                case ContentMode.Normal:
-                    return _tableContentNormal;
-                case ContentMode.Changed:
-                    return _tableContentChanged;
-                default:
-                    return null;
-            }
-        }
+
 
         public FullInfo GetFullContent(ContentMode m, int threatId)
         {
-            ThreatContent[] data = TableData(m);
+            ThreatContent[] data = GetTableContent(m);
             if (m == ContentMode.Changed) //in array of changed vals threadId does NOT correlate with array idxs (it contains only changed vals 
             {
                 threatId = Array.FindIndex(data, (x) => int.Parse(x.content[0]) == threatId);
@@ -230,7 +255,7 @@ namespace Lab2_SecurityThreatsParser
             {
                 threatId -= 1;
             }
-            if (threatId < 0) { throw new ArgumentOutOfRangeException(); }
+            if (threatId < 0) { return new FullInfo(); }
             if (threatId > data.Length)
             {
                 threatId = data.Length;
@@ -241,6 +266,21 @@ namespace Lab2_SecurityThreatsParser
         private static void LoadNewTableWeb(string uri, string pathToSave)
         {
             new WebClient().DownloadFile(uri, pathToSave);
+        }
+        public bool SaveAs(string path)
+        {
+            if (path == CurrentTablePath)
+            {
+                return false;
+            }
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+           
+            File.Copy(CurrentTablePath, path);
+            return true;
+         
         }
     }
 }
