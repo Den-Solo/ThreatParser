@@ -46,7 +46,8 @@ namespace Lab2_SecurityThreatsParser
         {
             OK,
             NetWorkProblems,
-            FileProblems
+            FileProblems,
+            SameFile
         }
 
         public static ContentMode LoadModeToContentMode(LoadMode lm)
@@ -98,6 +99,7 @@ namespace Lab2_SecurityThreatsParser
             CurrentTableName = _defaultTableName;   //it must be different but i rejected that idea
             CurrentTablePath = _defaultTablePath;   //so yeah CurrentTableName and  CurrentTablePath are always default // waiting for refactoring
             bool isException = false;
+            LoadStatus loadStatus = LoadStatus.OK;
             try
             {
                 if (lm == LoadMode.DownloadNew || lm == LoadMode.DownloadUpdate)
@@ -110,12 +112,12 @@ namespace Lab2_SecurityThreatsParser
             catch (WebException)
             {
                 isException = true;
-                return LoadStatus.NetWorkProblems;
+                loadStatus = LoadStatus.NetWorkProblems;
             }
             catch (Exception)
             {
                 isException = true;
-                return LoadStatus.FileProblems;
+                loadStatus = LoadStatus.FileProblems;
             }
             finally
             {
@@ -124,8 +126,11 @@ namespace Lab2_SecurityThreatsParser
                     File.Move(CurrentTablePath + ".deprecated", CurrentTablePath); //shit, go back, go back (if download failed)
                 }
             }
-            CanUpdate = true;
-            return LoadStatus.OK;
+            if (LoadModeToContentMode(lm) == ContentMode.Normal && !isException)
+            {
+                CanUpdate = true;
+            }
+            return loadStatus;
         }
         public void OpenExcelTable() // CurrentTablePath must be set correctly before
         {

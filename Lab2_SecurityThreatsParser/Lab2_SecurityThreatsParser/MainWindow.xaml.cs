@@ -193,6 +193,9 @@ namespace Lab2_GUI
                     case TableProcessor.LoadStatus.FileProblems:
                         msg = "Что-то пошло не так!\nПроблемы с файлом!\nСтоит попробовать другой...";
                         break;
+                    case TableProcessor.LoadStatus.SameFile:
+                        msg = "Незачем открывать тот же самый файл.";
+                        break;
                 }
                 if (status != TableProcessor.LoadStatus.OK)
                 {
