@@ -6,8 +6,10 @@
         xmlns:local="clr-namespace:Lab2_GUI"
         mc:Ignorable="d"
         Closing="MainWindow_Closing"
-        Title="IS Threats Parser" Height="450" Width="800" MinHeight="250" MinWidth="400"
+        Title="IS Threats Parser" 
+        Height="450" Width="800" MinHeight="400" MinWidth="800"
         Icon="Resources/Icons/security-shield .ico"
+        WindowStyle="ThreeDBorderWindow"
         >
 
 
@@ -123,27 +125,15 @@
 
     <Window.CommandBindings>
         <CommandBinding Command="New" 
-                        CanExecute="CommandBindingNew_CanExecute" 
-                        Executed="CommandBindingNew_Executed"/>
+                        CanExecute="CmdNew_CanExecute" 
+                        Executed="CmdNew_Executed"/>
         <CommandBinding Command="Open" 
-                        CanExecute="CommandBindingOpen_CanExecute" 
-                        Executed="CommandBindingOpen_Executed"/>
-        <CommandBinding Command="Undo" 
-                        CanExecute="CommandBindingUndo_CanExecute" 
-                        Executed="CommandBindingUndo_Executed"/>
-        <CommandBinding Command="Redo" 
-                        CanExecute="CommandBindingRedo_CanExecute" 
-                        Executed="CommandBindingRedo_Executed"/>
+                        CanExecute="CmdOpen_CanExecute" 
+                        Executed="CmdOpen_Executed"/>
         <CommandBinding Command="Save" 
-                        CanExecute="CommandBindingSave_CanExecute" 
-                        Executed="CommandBindingSave_Executed"/>
-
-
+                        CanExecute="CmdSave_CanExecute" 
+                        Executed="CmdSave_Executed"/>
     </Window.CommandBindings>
-
-
-
-
 
 
 
@@ -165,7 +155,8 @@
             <MenuItem Header="_File" Template="{StaticResource MenuTop}" >
                 <MenuItem Header="_Open" Command="Open" Template="{StaticResource MenuSub}"/>
                 <MenuItem Header="_Load default (from web)" Command="New" Template="{StaticResource MenuSub}" />
-                <MenuItem Header="_Update" Template="{StaticResource MenuSub}" />
+                <MenuItem Header="_Update (web)" Template="{StaticResource MenuSub}" Click="_UpdateWeb_Click"/>
+                <MenuItem Header="_Update (Local)" Template="{StaticResource MenuSub}" Click="_UpdateLocal_Click"/>
                 <Separator Template="{StaticResource MenuSep}" />
                 <MenuItem Header="_Save" Command="Save" Template="{StaticResource MenuSub}" />
                 <MenuItem Header="_Save As" Command="SaveAs" Template="{StaticResource MenuSub}"/>
@@ -176,14 +167,6 @@
                         <Image Source="/Resources/Icons/cancel.ico" />
                     </MenuItem.Icon>
                 </MenuItem>
-            </MenuItem>
-            <MenuItem Header="_Edit" Template="{StaticResource MenuTop}">
-                <MenuItem Header="_Undo" Command="Undo" Template="{StaticResource MenuSub}"/>
-                <MenuItem Header="_Redo" Command="Redo" Template="{StaticResource MenuSub}"/>
-                <Separator Template="{StaticResource MenuSep}" />
-                <MenuItem Header="_Cut" Command="Cut" Template="{StaticResource MenuSub}"/>
-                <MenuItem Header="_Copy" Command="Copy" Template="{StaticResource MenuSub}"/>
-                <MenuItem Header="_Paste" Command="Paste" Template="{StaticResource MenuSub}" />
             </MenuItem>
             <MenuItem Header="_Help" Template="{StaticResource MenuTop}">
                 <MenuItem Header="_About" Template="{StaticResource MenuSub}" Click="MenuItemAbout_Click"/>
@@ -196,15 +179,24 @@
             </MenuItem>
         </Menu>
         <DockPanel Grid.Row="1" Grid.ColumnSpan="2">
-            <Button Background="AliceBlue" Content="heel" MinWidth="35px">
-
+            <Button  Background="AliceBlue" ToolTip="Download New"  >
+                <Image Source="Resources/Pictures/bug.png"></Image>
             </Button>
-            <Button  Background="AliceBlue" Content="heel2">
-
+            <Button  Background="AliceBlue" ToolTip="Open (default)">
+                <Image Source="Resources/Pictures/bug.png"></Image>
             </Button>
-            <Button  Background="AliceBlue" Content="heel2">
-
+            <Button  Background="AliceBlue" ToolTip="Open (path)">
+                <Image Source="Resources/Pictures/bug.png"></Image>
             </Button>
+            <Button  Background="AliceBlue" ToolTip="Update (web)">
+                <Image Source="Resources/Pictures/bug.png"></Image>
+            </Button>
+            <Button  Background="AliceBlue" ToolTip="Update (local)">
+                <Image Source="Resources/Pictures/bug.png"></Image>
+            </Button>
+            <Rectangle Fill="AliceBlue">
+                
+            </Rectangle>
         </DockPanel>
 
         <Grid Grid.Row="2" Grid.ColumnSpan="2" Margin="15">
@@ -213,39 +205,121 @@
                 <ColumnDefinition Width="20"></ColumnDefinition>
                 <ColumnDefinition></ColumnDefinition>
             </Grid.ColumnDefinitions>
-            <DataGrid Grid.Column="0"  Name="MainDataGrid" 
-                      MinHeight="175" IsReadOnly="True" 
-                      RowBackground="White" AreRowDetailsFrozen="True" 
-                      AlternatingRowBackground="#FFAACDEA"
-                      ItemsSource="{Binding Si}" 
-                      AutoGenerateColumns="False">
-                <DataGrid.ItemContainerStyle>
-                    <Style TargetType="DataGridRow">
-                        <EventSetter Event="Selected" Handler="Row_Selected"/>
-                    </Style>
-                </DataGrid.ItemContainerStyle>
+            <TabControl x:Name="_tcThreatsList" SelectionChanged="_tcThreatsList_SelectionChanged">
+                <TabItem x:Name="_tiAllthreats">
+                    <TabItem.Header>
+                        <StackPanel Orientation="Horizontal">
+                            <Ellipse Height="10" Width="10" Fill="Black" />
+                            <TextBlock Margin="3">Все угрозы</TextBlock>
+                        </StackPanel>
+                    </TabItem.Header>
+                    <TabItem.Content>
+                         <DataGrid Grid.Column="0"  Name="dgAllThreatsList" 
+                          MinHeight="175" IsReadOnly="True" 
+                          RowBackground="White" AreRowDetailsFrozen="True" 
+                          AlternatingRowBackground="#FFC5F1FB"
+                          AutoGenerateColumns="False" SelectionChanged="dgAllThreatsList_SelectionChanged" SelectionMode="Single">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn MinWidth="25" Binding="{Binding Id}" Header="ID угрозы"/>
+                                <DataGridTextColumn Width="*" Binding="{Binding Name}" Header="Наименование">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style>
+                                            <Setter Property="TextBlock.TextWrapping" Value="Wrap">
+                                            </Setter>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                            </DataGrid.Columns>
+
+                        </DataGrid>
+                    </TabItem.Content>
+                </TabItem>
+                <TabItem x:Name="tbUpdatedThreats">
+                    <TabItem.Header>
+                        <StackPanel Orientation="Horizontal">
+                            <Rectangle Height="10" Width="10" Fill="Black" />
+                            <TextBlock Margin="3">Обновленные угрозы</TextBlock>
+                        </StackPanel>
+                    </TabItem.Header>
+                    <TabItem.Content>
+                        <DataGrid Grid.Column="0"  Name="dgChangesList" 
+                          MinHeight="175" IsReadOnly="True" 
+                          RowBackground="White" AreRowDetailsFrozen="True" 
+                          AlternatingRowBackground="#FFC5F1FB"
+                          AutoGenerateColumns="False" SelectionChanged="dgUpdatedList_SelectionChanged" SelectionMode="Single">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn MinWidth="25" Binding="{Binding Id}" Header="ID угрозы"/>
+                                <DataGridTextColumn Width="*" Binding="{Binding Name}" Header="Наименование">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style>
+                                            <Setter Property="TextBlock.TextWrapping" Value="Wrap">
+                                            </Setter>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                            </DataGrid.Columns>
+
+                        </DataGrid>
+                    </TabItem.Content>
+                </TabItem>
+            </TabControl>
+
+
+
+            <DataGrid Grid.Column="2"  Name="dgSupport" MinHeight="175" 
+                       AutoGenerateColumns="False">
                 <DataGrid.Columns>
-                    <DataGridTextColumn MinWidth="25" Binding="{Binding Id}" Header="ID угрозы"/>
-                    <DataGridTextColumn Width="*" Binding="{Binding Name}" Header="Наименование"/>
-                </DataGrid.Columns>
-
-            </DataGrid>
-
-
-            <DataGrid Grid.Column="2"  Name="SupportDataGrid" MinHeight="175" 
-                      ItemsSource="{Binding Fi}" AutoGenerateColumns="False">
-                <DataGrid.Columns>
-                    <DataGridTextColumn MinWidth="100" Binding="{Binding Path=Item1}"  Header="Тип"/>
-                    <DataGridTextColumn Width="*" Binding="{Binding Path=Item2}"  Header="Содержание"/>
+                    <DataGridTextColumn MinWidth="100" Binding="{Binding Path=Item1}"  Header="Тип">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style>
+                                <Setter Property="TextBlock.TextWrapping" Value="Wrap">
+                                </Setter>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+                    <DataGridTextColumn Width="*" Binding="{Binding Path=Item2}"  Header="Содержание">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style>
+                                <Setter Property="TextBlock.TextWrapping" Value="Wrap">
+                                </Setter>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
                 </DataGrid.Columns>
 
             </DataGrid>
         </Grid>
-        <ComboBox HorizontalAlignment="Left" Margin="315,0,0,0" 
-                  Grid.Row="3" Grid.Column="0" VerticalAlignment="Top" Width="50" Height="20"/>
+        <Grid Grid.Row="3" Grid.Column="0" Margin="20,0,10,5" >
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="178"></ColumnDefinition>
+                <ColumnDefinition Width="95"></ColumnDefinition>
+                <ColumnDefinition Width="40"></ColumnDefinition>
+                <ColumnDefinition Width="40"></ColumnDefinition>
+            </Grid.ColumnDefinitions>
+            <ComboBox   Name="_cbElemsOnPageCnt"
+                    Grid.Column="2"  
+                    VerticalContentAlignment="Center"
+                    HorizontalContentAlignment="Center" FontSize="14" 
+                    Width="80" SelectionChanged="_cbElemsOnPageCnt_SelectionChanged"
+                        ItemsSource="{Binding _ComboBoxPageVals, Mode=OneTime}"
+                        >
+              <!--  <ComboBoxItem Tag="15" Content="15" IsSelected="True"/>
+                <ComboBoxItem  Tag="30" Content="30" IsSelected="False"/>
+                <ComboBoxItem  Tag="45" Content="45" IsSelected="False"/>
+                <ComboBoxItem  Tag="90" Content="90" IsSelected="False"/>
+                <ComboBoxItem  Tag="10000" Content="All" IsSelected="False"/>-->
+            </ComboBox>
+            <TextBox IsReadOnly="True" HorizontalAlignment="Left" Height="20"  Grid.Row="0" 
+                     Grid.Column="1"
+                     TextWrapping="Wrap" Text="Элементов на странице:"
+                 VerticalAlignment="Top" Width="166" Background="{x:Null}" BorderBrush="{x:Null}" FontSize="14" Margin="17,0,0,0" Grid.ColumnSpan="2" />
+            <Button Name="_Prev" Content="&lt;" Grid.Column="3"  Width="40" Click="BtnPrev_Clicked"/>
+            <Button Name="_Next" Content=">"  AccessKeyManager.AccessKeyPressed="BtnNext_Clicked" Grid.Column="4"  Width="40" Click="BtnNext_Clicked" />
+        </Grid>
         <StatusBar Name="BottomStatusBar" BorderThickness="1"
                    BorderBrush="#FFAAA8AE" Background="#FF0078D7"  
-                   Grid.Row="4" Grid.ColumnSpan="2">
+                   Grid.Row="5" Grid.ColumnSpan="2">
             <Grid Name="StatusBarGrid" HorizontalAlignment="Stretch" Width="782" >
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="577*"></ColumnDefinition>
@@ -261,9 +335,6 @@
 
 
         </StatusBar>
-
-
-
 
     </Grid>
 </Window>
