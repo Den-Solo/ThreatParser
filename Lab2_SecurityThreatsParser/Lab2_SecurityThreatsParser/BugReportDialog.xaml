@@ -19,7 +19,7 @@
             <RowDefinition Height="31*"  />
         </Grid.RowDefinitions>
         <Label Name="lblQuestion" Grid.Column="1" Grid.Row="0">Question:</Label>
-        <TextBox Name="txtAnswer" Grid.Column="1" TextChanged="txtAnswer_TextChanged" Grid.Row="1">Answer</TextBox>
+        <TextBox TextWrapping="Wrap" Name="txtAnswer" Grid.Column="1" TextChanged="txtAnswer_TextChanged" Grid.Row="1">Answer</TextBox>
 
         <WrapPanel Grid.Row="2"  Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Bottom" Height="20" Width="130" >
             <Button IsDefault="True" Name="btnDialogOk" Click="btnDialogOk_Click" MinWidth="60" Margin="0,0,10,0">_Send</Button>

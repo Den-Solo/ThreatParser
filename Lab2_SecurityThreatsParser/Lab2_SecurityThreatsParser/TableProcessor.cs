@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 using System.Net;
-using Microsoft.Office.Interop.Excel; //additional dependancy on MS Office installed but ok
 using System.IO;
 using System.Windows;
 using System.Data;
@@ -13,10 +12,8 @@ using ExcelDataReader;
 
 namespace Lab2_SecurityThreatsParser
 {
-    public partial class TableProcessor/* : IDisposable*/
+    public partial class TableProcessor
     {
-        const string YES = "Да";
-        const string NO = "Нет";
         private const string _defaultUri = @"https://bdu.fstec.ru/files/documents/thrlist.xlsx";
         private const string _defaultTableName = "thrlist.xlsx";
         private readonly static string _defaultTablePath = Directory.GetCurrentDirectory() + "\\" + _defaultTableName;
@@ -33,14 +30,14 @@ namespace Lab2_SecurityThreatsParser
         public enum LoadMode
         {
             DownloadNew,
-            OpenExisting,
+            OpenExisting,   
             DownloadUpdate,
             OpenUpdate
         }
         public enum ContentMode
         {
-            Normal,     //values displayed in main grid - all threats
-            Changed     //threats which were changed by updated vals
+            Normal,         //values displayed in main grid - all threats
+            Changed         //threats which were changed by updated vals
         }
         public enum LoadStatus
         {
@@ -75,29 +72,30 @@ namespace Lab2_SecurityThreatsParser
         }
         public LoadStatus LoadOrOpen(LoadMode lm, string localPath)
         {
-            if (LoadModeToContentMode(lm) == ContentMode.Changed)
+            if (LoadModeToContentMode(lm) == ContentMode.Changed)       //if update then...
             {
-                if (!CanUpdate)
+                if (!CanUpdate)                                         //must be checked or handled by caller
                 {
                     throw new InvalidOperationException("No update before first load");
                 }
-                if (LoadModeToContentMode(lm) == ContentMode.Changed && localPath == CurrentTablePath)
+                if (localPath == CurrentTablePath)                      //impossible to update data base with the same data base
                 {
                     return LoadStatus.FileProblems;
                 }
-                File.Delete(CurrentTablePath + ".deprecated");              //deleted forever
-                if (File.Exists(CurrentTablePath))
+                File.Delete(CurrentTablePath + ".deprecated");          //deleted .deprecated forever (if any)
+                if (File.Exists(CurrentTablePath))                      //make current DB deprecated to give space for a new one
                 {
                     File.Move(CurrentTablePath, CurrentTablePath + ".deprecated");
                 }
             }
             if (!string.IsNullOrWhiteSpace(localPath) && (lm == LoadMode.OpenExisting || lm == LoadMode.OpenUpdate))
             {
-                File.Copy(localPath, _defaultTablePath);    //Database will always be in current working dir
+                File.Copy(localPath, _defaultTablePath);                 //Database will always be in current working dir
                 localPath = null;
             }
-            CurrentTableName = _defaultTableName;   //it must be different but i rejected that idea
-            CurrentTablePath = _defaultTablePath;   //so yeah CurrentTableName and  CurrentTablePath are always default // waiting for refactoring
+            CurrentTableName = _defaultTableName;                        //it must be different but i rejected my idea of allowing a user to choose database to open
+            CurrentTablePath = _defaultTablePath;                        //so yeah CurrentTableName and  CurrentTablePath are always default
+                                                                        
             bool isException = false;
             LoadStatus loadStatus = LoadStatus.OK;
             try
@@ -153,7 +151,7 @@ namespace Lab2_SecurityThreatsParser
             {
                 _tableContentChanged = _tableContentNormal;
                 ReadAllLines(GetTableContentSet_,ref _tableContentNormal);
-                _tableContentChanged = GetUpdatedThreats(_tableContentNormal, _tableContentChanged);
+                _tableContentChanged = GetChangedThreats(_tableContentNormal, _tableContentChanged);
             }
             GetTableContentSet_ = null;
         }
@@ -171,11 +169,11 @@ namespace Lab2_SecurityThreatsParser
                 dest[i - rowIdxFirst] = new ThreatContent(src.Tables[0].Rows[i].ItemArray.Select(s => s.ToString()).ToArray());
                 for (int j = 5; j < 8 && j < dest[i - rowIdxFirst].content.Length; ++j)
                 {
-                    dest[i - rowIdxFirst].content[j] = (dest[i - rowIdxFirst].content[j] == "1" ? YES : NO);
+                    dest[i - rowIdxFirst].content[j] = (dest[i - rowIdxFirst].content[j] == "1" ? "Да" : "Нет");
                 }
             }
         }
-        private static ThreatContent[] GetUpdatedThreats(in ThreatContent[] updated,in ThreatContent[] outdated)
+        private static ThreatContent[] GetChangedThreats(in ThreatContent[] updated,in ThreatContent[] outdated)
         {
             List<ThreatContent> result = new List<ThreatContent>();
             int len = Math.Min(updated.Length, outdated.Length);
@@ -233,7 +231,7 @@ namespace Lab2_SecurityThreatsParser
             OpenExcelTable();
         }
 
-        public ShortInfo[] GetShortContent(ContentMode m)
+        public ShortInfo[] GetShortContent(ContentMode m) // called once to get all
         {
             ThreatContent[] data = GetTableContent(m);
             if (data == null)
@@ -252,18 +250,18 @@ namespace Lab2_SecurityThreatsParser
         public FullInfo GetFullContent(ContentMode m, int threatId)
         {
             ThreatContent[] data = GetTableContent(m);
-            if (m == ContentMode.Changed) //in array of changed vals threadId does NOT correlate with array idxs (it contains only changed vals 
+            if (m == ContentMode.Changed)       //in array of changed vals threadId does NOT correlate with array idxs (it contains only changed vals)
             {
                 threatId = Array.FindIndex(data, (x) => int.Parse(x.content[0]) == threatId);
             }
-            else //in array of normal vals threadId does correlate with array idxs but it is greater by 1 so ...
+            else                                //in array of normal vals threadId does correlate with array idxs but it is greater by 1 so ...
             {
                 threatId -= 1;
             }
             if (threatId < 0) { return new FullInfo(); }
             if (threatId > data.Length)
             {
-                threatId = data.Length;
+                threatId = data.Length - 1;
             }
             return new FullInfo(_headers.Zip(data[threatId].content, (x, y) => new Tuple<string, string>(x, y)).ToArray());
         }

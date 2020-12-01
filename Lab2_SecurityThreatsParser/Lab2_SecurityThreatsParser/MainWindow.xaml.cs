@@ -31,13 +31,13 @@ namespace Lab2_GUI
         private const int _UPDATE_INTERVAL_HOUR = 0;
         private const int _UPDATE_INTERVAL_MIN = 5;
         private const int _UPDATE_INTERVAL_SEC = 0;
-        public static string[] _ComboBoxPageVals { get; } = new string[5] { "15", "30", "45", "90", "All" };
+        public static string[] _ComboBoxPageVals { get; } = new string[5] { "15", "30", "45", "90", "All" };    //binded to combobox
         private int _tcPrevSelectedIdx = 0;                         //to avoid unnecessary combobox updates
         private UserMessageWnd _userMessageWnd = null;              //only one or zero msgWnd allowed at a moment
         private TableProcessor _table = new TableProcessor();
         private Paginator _paginatorNormal = null;
         private Paginator _paginatorChanges = null;
-        private WinRegBasedTimer timer = null;
+        private WinRegBasedTimer _timer = null;
 
         private int _ElementsOnPageComboBox
         {
@@ -90,9 +90,8 @@ namespace Lab2_GUI
             Dispatcher.BeginInvoke(new Action(() =>
             {
                 OpenOnStart();
-                timer = new WinRegBasedTimer(new TimeSpan(_UPDATE_INTERVAL_HOUR, _UPDATE_INTERVAL_MIN, _UPDATE_INTERVAL_SEC), this.UpdateEventHandler, this);
+                _timer = new WinRegBasedTimer(new TimeSpan(_UPDATE_INTERVAL_HOUR, _UPDATE_INTERVAL_MIN, _UPDATE_INTERVAL_SEC), this.UpdateEventHandler, this);
             })));
-            
         }
         private void UpdateEventHandler()
         {
@@ -182,9 +181,38 @@ namespace Lab2_GUI
         }
         private bool LoadOrOpen(TableProcessor.LoadMode lm, string path)
         {
+            string msg = "";
             var status = _table.LoadOrOpen(lm, path);
+            if (status == TableProcessor.LoadStatus.OK)
             {
-                string msg = "";
+                if (TableProcessor.LoadModeToContentMode(lm) == TableProcessor.ContentMode.Normal)
+                {
+                    this._tcThreatsList.SelectedIndex = 0;
+                    this._tbUpdatedThreats.IsEnabled = false;
+                    _paginatorNormal = new Paginator(this._dgAllThreatsList, _table.GetShortContent(TableProcessor.ContentMode.Normal), _ElementsOnPageComboBox);
+                    BtnNext_Clicked(this._dgAllThreatsList, null);
+
+                    msg = (lm == TableProcessor.LoadMode.OpenExisting ? "Открыто успешно!" : "Загружено успешно!");
+                }
+                else
+                {
+                    _paginatorNormal = new Paginator(this._dgAllThreatsList, _table.GetShortContent(TableProcessor.ContentMode.Normal), _ElementsOnPageComboBox);
+                    this._tcThreatsList.SelectedIndex = 0;
+                    BtnNext_Clicked(this._dgAllThreatsList, null);
+
+                    this._tbUpdatedThreats.IsEnabled = true;
+
+                    _paginatorChanges = new Paginator(this._dgChangedList, _table.GetShortContent(TableProcessor.ContentMode.Changed), _ElementsOnPageComboBox);
+                    this._tcThreatsList.SelectedIndex = 1;
+                    BtnNext_Clicked(this._dgChangedList, null);
+
+                    msg = "Обновлено успешно!\n";
+                    msg += (_paginatorChanges._DataLength > 0 ? $"Обновленных записей: {_paginatorChanges._DataLength}" 
+                        : "Вот только ничего не обновилось...\nКак часто ФСТЭК делает обновы???");
+                }
+            }
+            else // smth went wrong - choose msg
+            {
                 switch (status)
                 {
                     case TableProcessor.LoadStatus.NetWorkProblems:
@@ -197,49 +225,9 @@ namespace Lab2_GUI
                         msg = "Незачем открывать тот же самый файл.";
                         break;
                 }
-                if (status != TableProcessor.LoadStatus.OK)
-                {
-                    UserMsgWndShow(msg);
-                    return false;
-                }
             }
-            if (TableProcessor.LoadModeToContentMode(lm) == TableProcessor.ContentMode.Normal)
-            {
-                this._tcThreatsList.SelectedIndex = 0;
-                this._tbUpdatedThreats.IsEnabled = false;
-                _paginatorNormal = new Paginator(this._dgAllThreatsList, _table.GetShortContent(TableProcessor.ContentMode.Normal), _ElementsOnPageComboBox);
-                this._Next.IsEnabled = _paginatorNormal.Next();
-                this._Prev.IsEnabled = _paginatorNormal._CanGoPrev;
-            }
-            else
-            {
-                _paginatorNormal = new Paginator(this._dgAllThreatsList, _table.GetShortContent(TableProcessor.ContentMode.Normal), _ElementsOnPageComboBox);
-                this._tcThreatsList.SelectedIndex = 0;
-                BtnNext_Clicked(this._dgAllThreatsList, null);
-
-                this._tbUpdatedThreats.IsEnabled = true;
-
-                _paginatorChanges = new Paginator(this._dgChangedList, _table.GetShortContent(TableProcessor.ContentMode.Changed), _ElementsOnPageComboBox);
-                this._tcThreatsList.SelectedIndex = 1;
-                BtnNext_Clicked(this._dgChangedList, null);
-            }
-
-            if (TableProcessor.LoadModeToContentMode(lm) == TableProcessor.ContentMode.Normal)
-            {
-                UserMsgWndShow((lm == TableProcessor.LoadMode.OpenExisting ? "Открыто успешно!" : "Загружено успешно!"));
-            }
-            else
-            {
-                if (_paginatorChanges._DataLength > 0) 
-                {
-                    UserMsgWndShow($"Обновлено успешно!\nОбновленных записей: {_paginatorChanges._DataLength}"); 
-                }
-                else
-                {
-                    UserMsgWndShow($"Обновлено успешно!\nВот только ничего не обновилось...\nКак часто ФСТЭК делает обновы???");
-                }
-            }
-            return true;
+            UserMsgWndShow(msg);
+            return status == TableProcessor.LoadStatus.OK;
         }
         private void _UpdateWeb_Click(object sender, RoutedEventArgs e)
         {

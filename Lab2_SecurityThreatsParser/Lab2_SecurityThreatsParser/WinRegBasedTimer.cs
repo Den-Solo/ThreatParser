@@ -26,13 +26,13 @@ namespace Lab2_SecurityThreatsParser
 
             parent.Closed += Close_Handler;
 
-            RegistryKey key = Registry.CurrentUser.OpenSubKey("Software", true);
-            key = key.OpenSubKey(_appName);
-            if (key == null) //create new
+            using (RegistryKey key = Registry.CurrentUser.OpenSubKey("Software", true).OpenSubKey(_appName))
             {
-                SetStartTime();
+                if (key == null) //create new
+                {
+                    SetStartTime();
+                }
             }
-            key.Dispose();
             _th = new Thread(CheckTime);
             _th.Start();
         }
@@ -51,22 +51,16 @@ namespace Lab2_SecurityThreatsParser
         }
         private DateTime GetStartTime()
         {
-            using (RegistryKey key = Registry.CurrentUser.OpenSubKey("Software", true))
+            using (RegistryKey key = Registry.CurrentUser.OpenSubKey("Software", true).OpenSubKey(_appName))
             {
-                using (var subkey = key.OpenSubKey(_appName))
-                {
-                    return Convert.ToDateTime(subkey.GetValue(_regValueName).ToString());
-                }
+                return Convert.ToDateTime(key.GetValue(_regValueName).ToString());
             }
         }
         private void SetStartTime()
         {
-            using (RegistryKey key = Registry.CurrentUser.OpenSubKey("Software", true))
+            using (RegistryKey key = Registry.CurrentUser.OpenSubKey("Software", true).CreateSubKey(_appName))
             {
-                using (var subkey = key.CreateSubKey(_appName))
-                {
-                    subkey.SetValue(_regValueName, DateTime.Now.ToString());
-                }
+                key.SetValue(_regValueName, DateTime.Now.ToString());
             }
         }
         private void Close_Handler(object sender, EventArgs e)
